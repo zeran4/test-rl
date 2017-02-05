@@ -50,5 +50,6 @@ print("Success rate: " + str(sum(rList)/num_episodes))
 print("Finale Q-Table Values")
 print("LEFT DOWN RIGHT UP")
 print(Q)
-plt.bar(range(len(rList)), rList, color="red")
+plt.bar(range(len(rList)), rList, color="blue")   # blue가 안먹네. (윈7) : edgecolor가 검은색
+plt.bar(range(len(rList)), rList, color="blue", edgecolor="none")    # edgecolor를 none으로 하면 color가 나옴
 plt.show()

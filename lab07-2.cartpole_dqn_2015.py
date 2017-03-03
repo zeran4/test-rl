@@ -7,6 +7,7 @@ import dqn
 from collections import deque
 
 import gym
+from gym import wrappers
 env = gym.make('CartPole-v0')
 
 # Constants defining our neural network
@@ -37,7 +38,9 @@ def replay_train(mainDQN, targetDQN, train_batch):
     #Train our network using target and predicted Q values on each episode
     return mainDQN.update(x_stack, y_stack)
 
-def bot_play(mainDQN):
+def bot_play(env, mainDQN):
+#    env = wrappers.Monitor(env, "/tmp/gym-results", force=True)    # playing 레코딩
+
     # See our trained network in action
     s = env.reset()
     reward_sum = 0
@@ -65,10 +68,13 @@ def get_copy_var_ops(*, dest_scope_name="target", src_scope_name="main"):
     return op_holder
 
 def main():
-    max_episodes = 5000
+    max_episodes = 50000
     max_step_count = 10000    # 충분히 오래 play한 경우 무한 루프(?)를 방지하기 위해 끊음
-    max_streaks_count = 10    # 충분히 오래 play한 경우가 연속해서 나올 경우, 해당 DQN으로 실제 play를 보자.
+    max_streaks_count = 5    # 충분히 오래 play한 경우가 연속해서 나올 경우, 해당 DQN으로 실제 play를 보자.
     streaks_count = 0
+    episode_count = 5    # 에피소드 몇번마다 학습을 할 것인가? (강의 : 10)
+    mini_batch_count = 10     # mini batch때의 수 (강의 : 10)
+    mini_batch_repeat_count = 50    # mini batch 반복 횟수 (강의 : 50)
 
     # store the previous observations in replay memory
     replay_buffer = deque()
@@ -93,9 +99,11 @@ def main():
             while not done:
                 if np.random.rand(1) < e:
                     action = env.action_space.sample()
+#                    print("action(sample) : {}".format(action))
                 else:
                     # Choose an action by greedily from the Q-network
                     action = np.argmax(mainDQN.predict(state))
+#                    print("action(predict) : {}".format(action))
 
                 # Get new state and reward from environment
                 next_state, reward, done, _ = env.step(action)
@@ -129,18 +137,19 @@ def main():
                 # break
 
 
-            if episode % 10 ==1:
+#            if episode % episode_count == 1:    # 1 때 하고 그 후부터 episode_count 단위로 수행
+            if (episode+1) >= episode_count and (episode+1) % episode_count == 0:
                 # Get a random batch of experiences.
-                for _ in range(50):
+                for _ in range(mini_batch_repeat_count):
                     # Minibatch works better
-                    minibatch = random.sample(replay_buffer, 10)
+                    minibatch = random.sample(replay_buffer, mini_batch_count)
                     loss, _ = replay_train(mainDQN, targetDQN, minibatch)
                     
                 print("Loss: ", loss)
                 # copy q_net => target_net
                 sess.run(copy_ops)
 
-        bot_play(mainDQN)
+        bot_play(env, mainDQN)
     
 if __name__ == "__main__":
     main()
